@@ -36,62 +36,32 @@
         /* Phần Vòng Quay */
         .wheel-container {
             position: relative;
-            width: 300px;
-            height: 300px;
+            width: 320px;
+            height: 320px;
             flex-shrink: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
         .pointer {
             position: absolute;
-            top: -15px;
+            top: -5px;
             left: 50%;
             transform: translateX(-50%);
             width: 0;
             height: 0;
             border-left: 15px solid transparent;
             border-right: 15px solid transparent;
-            border-bottom: 30px solid #e74c3c;
+            border-top: 30px solid #e74c3c; /* Mũi tên chỉ xuống */
             z-index: 10;
         }
 
-        #wheel {
-            width: 100%;
-            height: 100%;
+        canvas {
             border-radius: 50%;
-            border: 6px solid #fff;
-            position: relative;
-            overflow: hidden;
-            transition: transform 4s cubic-bezier(0.15, 0.9, 0.2, 1);
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
-
-        .slice {
-            position: absolute;
-            width: 50%;
-            height: 50%;
-            transform-origin: 100% 100%;
-            left: 0;
-            top: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 16px;
-            color: white;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-        }
-
-        /* Chia 4 phần (mỗi phần 90 độ) */
-        .slice:nth-child(1) { background-color: #ff7675; transform: rotate(0deg) skewY(-45deg); }
-        .slice:nth-child(2) { background-color: #55efc4; transform: rotate(90deg) skewY(-45deg); }
-        .slice:nth-child(3) { background-color: #ffeaa7; color: #2d3436; text-shadow: none; transform: rotate(180deg) skewY(-45deg); }
-        .slice:nth-child(4) { background-color: #74b9ff; transform: rotate(270deg) skewY(-45deg); }
-
-        .slice span {
-            position: absolute;
-            transform: skewY(45deg) rotate(45deg);
-            text-align: center;
-            width: 80px;
+            border: 6px solid #fff;
+            transition: transform 4s cubic-bezier(0.15, 0.9, 0.2, 1);
         }
 
         .spin-btn {
@@ -125,7 +95,7 @@
             padding: 25px;
             border-radius: 15px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            min-height: 250px;
+            min-height: 280px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -179,12 +149,7 @@
         <div style="display: flex; flex-direction: column; align-items: center;">
             <div class="wheel-container">
                 <div class="pointer"></div>
-                <div id="wheel">
-                    <div class="slice"><span>Ô Số 1</span></div>
-                    <div class="slice"><span>Ô Số 2</span></div>
-                    <div class="slice"><span>Ô Số 3</span></div>
-                    <div class="slice"><span>Ô Số 4</span></div>
-                </div>
+                <canvas id="wheelCanvas" width="320" height="320"></canvas>
             </div>
             <button class="spin-btn" onclick="spinWheel()">QUAY NGAY</button>
         </div>
@@ -203,7 +168,13 @@
     </div>
 
     <script>
-        // Dữ liệu câu hỏi tương ứng cho 4 ô
+        const sectors = [
+            { color: "#ff7675", text: "Ô Số 1" },
+            { color: "#55efc4", text: "Ô Số 2" },
+            { color: "#ffeaa7", text: "Ô Số 3" },
+            { color: "#74b9ff", text: "Ô Số 4" }
+        ];
+
         const dataQuestions = [
             {
                 title: "Câu hỏi cho Ô Số 1:",
@@ -227,31 +198,61 @@
             }
         ];
 
-        let currentRotation = 0;
+        const canvas = document.getElementById("wheelCanvas");
+        const ctx = canvas.getContext("2d");
+        const totalSectors = sectors.length;
+        const arc = (2 * Math.PI) / totalSectors;
+        
+        let currentRotation = 0; // Tính theo độ
         let isSpinning = false;
+
+        // Vẽ vòng quay lên canvas
+        function drawWheel() {
+            const radius = canvas.width / 2;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            sectors.forEach((sector, i) => {
+                const angle = i * arc;
+                
+                // Vẽ miếng bánh xe
+                ctx.beginPath();
+                ctx.fillStyle = sector.color;
+                ctx.moveTo(radius, radius);
+                ctx.arc(radius, radius, radius, angle, angle + arc, false);
+                ctx.lineTo(radius, radius);
+                ctx.fill();
+                ctx.save();
+
+                // Vẽ chữ
+                ctx.translate(radius, radius);
+                ctx.rotate(angle + arc / 2);
+                ctx.textAlign = "right";
+                ctx.fillStyle = (sector.text === "Ô Số 3") ? "#2d3436" : "#ffffff";
+                ctx.font = "bold 16px 'Segoe UI', sans-serif";
+                ctx.fillText(sector.text, radius - 20, 6);
+                ctx.restore();
+            });
+        }
+
+        drawWheel();
 
         function spinWheel() {
             if (isSpinning) return;
             isSpinning = true;
 
-            const wheel = document.getElementById("wheel");
-            
-            // Random góc quay ngẫu nhiên (từ 5 đến 8 vòng full + lệch ngẫu nhiên)
             const randomExtra = Math.floor(Math.random() * 360);
             const totalDegrees = currentRotation + 1800 + randomExtra; 
             
             currentRotation = totalDegrees;
-            wheel.style.transform = `rotate(${currentRotation}deg)`;
+            canvas.style.transform = `rotate(${currentRotation}deg)`;
 
-            // Đợi hiệu ứng quay kết thúc (4 giây) rồi tính ra trúng ô nào
             setTimeout(() => {
                 isSpinning = false;
                 
-                // Tính toán xác định ô trúng thưởng dựa trên góc quay (mỗi ô chiếm 90 độ)
-                const normalizedDegree = (360 - (currentRotation % 360)) % 360;
-                const index = Math.floor(normalizedDegree / 90);
+                // Tính toán chính xác ô trúng dựa trên vị trí mũi tên ở góc 12 giờ (hướng lên trên)
+                const normalizedDegree = (360 - (currentRotation % 360) + 270) % 360;
+                const index = Math.floor(normalizedDegree / (360 / totalSectors));
                 
-                // Hiển thị câu hỏi tương ứng
                 showQuestion(index);
             }, 4000);
         }
@@ -262,7 +263,7 @@
             document.getElementById("q-text").innerText = qData.question;
 
             const ansContainer = document.getElementById("answers-container");
-            ansContainer.innerHTML = ""; // Xóa đáp án cũ
+            ansContainer.innerHTML = ""; 
 
             qData.answers.forEach(ans => {
                 const div = document.createElement("div");
